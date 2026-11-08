@@ -48,6 +48,8 @@
     box-shadow:0 8px 0 #b5541a;}
   .game-card.shadow{background:linear-gradient(160deg,#8d99ae,#5c6b82);
     box-shadow:0 8px 0 #414d5e;}
+  .game-card.chapaev{background:linear-gradient(160deg,#e07a5f,#a4442e);
+    box-shadow:0 8px 0 #7a2f1e;}
   .game-cards{max-width:980px;}
   .game-card .game-icon{font-size:clamp(50px,12vw,72px);line-height:1;}
   .game-card .game-title{font-size:clamp(20px,5vw,26px);font-weight:900;}
@@ -61,7 +63,7 @@
 
   /* ========== ВЫБОР УРОВНЯ ========== */
   .lvl-grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:600px;}
-  .lvl-chip{width:66px;height:66px;border:none;border-radius:18px;
+  .lvl-chip{width:auto;min-width:64px;padding:0 12px;height:66px;border:none;border-radius:18px;
     background:rgba(255,255,255,.95);font-family:inherit;cursor:pointer;
     font-weight:900;font-size:24px;color:#7a3d1a;
     box-shadow:0 4px 0 rgba(122,61,26,.28);
@@ -89,7 +91,13 @@
   .lb-head{color:#a06a3a;font-size:13px;text-transform:uppercase;letter-spacing:1px;}
   .lb-first{background:rgba(255,210,63,.35);border-radius:10px;}
   .lb-msg{font-weight:800;color:#2e7a2e;min-height:20px;}
+  .lb-stats{font-weight:800;font-size:14px;color:#5a3a7a;background:rgba(255,255,255,.75);
+    border-radius:12px;padding:6px 12px;width:min(420px,86vw);margin:0 auto;}
   .lb-note{font-size:12px;color:#a06a3a;max-width:420px;margin:0 auto;line-height:1.4;}
+  .lb-sub{font-weight:900;font-size:17px;color:#d14d2a;margin:6px 0 2px;}
+  .lb-fb input{font-family:inherit;font-size:15px;font-weight:700;color:#5a3a7a;
+    text-align:center;padding:9px 12px;border-radius:14px;border:3px solid #4cc9f0;
+    outline:none;width:min(340px,80vw);background:rgba(255,255,255,.95);}
 
   /* ========== МАГАЗИН МОНСТРОВ ========== */
   #shop{position:fixed;left:0;right:0;bottom:0;z-index:15;
@@ -227,6 +235,12 @@
       <span class="game-title">Тени</span>
       <span class="game-desc">Кто спрятался?</span>
       <span class="game-prog" id="prog-sh">Уровень 1</span>
+    </button>
+    <button class="game-card chapaev" data-game="chapaev">
+      <span class="game-icon">♟️</span>
+      <span class="game-title">Чапаев</span>
+      <span class="game-desc">Выбей шашки котика!</span>
+      <span class="game-prog" id="prog-chp">Уровень 1/3</span>
     </button>
     <button class="game-card lbcard" data-game="leaderboard">
       <span class="game-icon">🏆</span>
@@ -717,9 +731,9 @@ const FX={
 
 /* ================= СОХРАНЕНИЕ ПРОГРЕССА ================= */
 const SAVE_KEY='kids_games_v2';
-function freshSave(){ return {mj:{level:0,stars:{}}, m3:{level:0,stars:{}}, sm:{coins:90, placed:[]}, mini:{}}; }
+function freshSave(){ return {mj:{level:0,stars:{}}, m3:{level:0,stars:{}}, sm:{coins:90, placed:[]}, mini:{}, plays:{}}; }
 let save=freshSave();
-try{ const s=JSON.parse(localStorage.getItem(SAVE_KEY)); if(s&&s.mj&&s.m3){ if(!s.sm) s.sm=freshSave().sm; if(!s.mini) s.mini={}; save=s; } }catch(e){}
+try{ const s=JSON.parse(localStorage.getItem(SAVE_KEY)); if(s&&s.mj&&s.m3){ if(!s.sm) s.sm=freshSave().sm; if(!s.mini) s.mini={}; if(!s.plays) s.plays={}; save=s; } }catch(e){}
 function persist(){ try{ localStorage.setItem(SAVE_KEY,JSON.stringify(save)); }catch(e){} }
 function totalStars(g){ let n=0; for(const k in g.stars) n+=g.stars[k]; return n; }
 function updateMenuProg(){
@@ -733,6 +747,7 @@ function updateMenuProg(){
   document.getElementById('prog-ca').textContent=`Уровень ${m('catch').level+1}/3`;
   document.getElementById('prog-cn').textContent=`Уровень ${m('count').level+1}/3`;
   document.getElementById('prog-sh').textContent=`Уровень ${m('shadow').level+1}/3`;
+  document.getElementById('prog-chp').textContent=`Уровень ${Math.min(m('chapaev').level+1,3)}/3`;
   document.getElementById('prog-lb').textContent=`⭐ ${LB.totalStars()}`;
 }
 
@@ -2428,6 +2443,62 @@ const LB={
         },
         ()=>{ cb(this.localBoard(), false); });
     }catch(e){ cb(this.localBoard(), false); }
+  },
+  trackVisit(){
+    this.ensureFirebase().then(ok=>{
+      if(!ok) return;
+      try{
+        if(!localStorage.getItem('kids_uid')){ localStorage.setItem('kids_uid','u'+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36)); }
+        const uid=localStorage.getItem('kids_uid');
+        const d=new Date();
+        const day=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+        this.db.ref('stats/visitsTotal').transaction(v=>(v||0)+1);
+        this.db.ref('stats/days/'+day).transaction(v=>(v||0)+1);
+        this.db.ref('stats/unique/'+uid).set({first:Date.now()});
+      }catch(e){}
+    });
+  },
+  countPlay(key){
+    try{ save.plays[key]=(save.plays[key]||0)+1; persist(); }catch(e){}
+    this.ensureFirebase().then(ok=>{
+      if(!ok) return;
+      try{ this.db.ref('stats/games/'+key).transaction(v=>(v||0)+1); }catch(e){}
+    });
+  },
+  readPlays(cb){
+    this.ensureFirebase().then(ok=>{
+      if(!ok){ cb(null); return; }
+      try{
+        this.db.ref('stats/games').once('value', s=>cb(s.val()||{}), ()=>cb(null));
+      }catch(e){ cb(null); }
+    });
+  },
+  sendFeedback(text, cb){
+    const clean=String(text||'').trim().slice(0,200);
+    if(!clean){ cb(false); return; }
+    const name=this.playerName()||'аноним';
+    this.ensureFirebase().then(ok=>{
+      if(!ok){ cb(false); return; }
+      try{
+        this.db.ref('feedback').push(
+          {name:String(name).slice(0,12), text:clean, stars:this.totalStars()||0, ts:Date.now()},
+          err=>cb(!err)
+        );
+      }catch(e){ cb(false); }
+    });
+  },
+  readStats(cb){
+    this.ensureFirebase().then(ok=>{
+      if(!ok){ cb(null); return; }
+      try{
+        this.db.ref('stats').once('value', s=>{
+          const v=s.val()||{};
+          const d=new Date();
+          const day=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+          cb({ total:v.visitsTotal||0, today:(v.days&&v.days[day])||0, unique:v.unique?Object.keys(v.unique).length:0 });
+        }, ()=>cb(null));
+      }catch(e){ cb(null); }
+    });
   }
 };
 function showLeaderboard(){
@@ -2440,6 +2511,13 @@ function showLeaderboard(){
     <button class="next-btn" id="lbSend">📨 Отправить мой результат</button>
     <div id="lbMsg" class="lb-msg"></div>
     <div class="lb-table" id="lbTable"><div class="lb-row lb-head"><span>#</span><span>Имя</span><span>⭐</span></div><div class="lb-row"><span>—</span><span>Загрузка…</span><span></span></div></div>
+    <div class="lb-stats" id="lbStats"></div>
+    <div class="lb-sub">📊 Популярность игр</div>
+    <div class="lb-table" id="playsTable"><div class="lb-row"><span>—</span><span>Считаем…</span><span></span></div></div>
+    <div class="lb-sub">💬 Твой отзыв</div>
+    <div class="lb-name"><input id="fbText" maxlength="200" placeholder="Что понравилось? Что добавить?"></div>
+    <button class="next-btn" id="fbSend">💬 Отправить отзыв</button>
+    <div class="lb-msg" id="fbMsg"></div>
     <div class="lb-note" id="lbNote"></div>
     <div class="btn-row">
       <button class="next-btn secondary" id="menuBtn2">🏠 В меню</button>
@@ -2456,6 +2534,33 @@ function showLeaderboard(){
   }
   LB.ensureFirebase().then(()=>{
     LB.top((rows, online)=>renderTable(rows, online));
+    LB.readStats(st=>{
+      if(st) document.getElementById('lbStats').textContent='🎮 Открытий: '+st.total+' · 📅 Сегодня: '+st.today+' · 👥 Устройств: '+st.unique;
+    });
+    LB.readPlays(fb=>renderPlays(fb));
+  });
+  function renderPlays(fb){
+    const local=save.plays||{};
+    const rows=[];
+    for(const k in GAME_TITLES){
+      const cnt=Math.max(local[k]||0,(fb&&fb[k])||0);
+      if(cnt>0) rows.push({t:GAME_TITLES[k], c:cnt, i:(GAME_ICONS[k]||'🎮')});
+    }
+    rows.sort((a,b)=>b.c-a.c);
+    const t=document.getElementById('playsTable');
+    if(!t) return;
+    if(!rows.length){ t.innerHTML='<div class="lb-row"><span>—</span><span>Играй — соберётся статистика</span><span></span></div>'; return; }
+    t.innerHTML='<div class="lb-row lb-head"><span>Игра</span><span></span><span>▶</span></div>'+
+      rows.map(r=>`<div class="lb-row"><span>${esc(r.t)}</span><span>${r.i}</span><span>${r.c}</span></div>`).join('');
+  }
+  document.getElementById('fbSend').addEventListener('click',()=>{
+    const t=document.getElementById('fbText').value;
+    if(!t.trim()){ document.getElementById('fbMsg').textContent='Напиши что-нибудь 🙂'; return; }
+    document.getElementById('fbMsg').textContent='Отправляю…';
+    LB.sendFeedback(t, ok=>{
+      document.getElementById('fbMsg').textContent= ok? 'Спасибо за отзыв! 💛' : 'Нет связи — попробуй позже';
+      if(ok) document.getElementById('fbText').value='';
+    });
   });
   document.getElementById('lbSend').addEventListener('click',()=>{
     const inp=document.getElementById('lbName');
@@ -2472,7 +2577,9 @@ function showLeaderboard(){
 }
 
 /* ================= ВЫБОР УРОВНЯ ================= */
-const GAME_TITLES={mahjong:'Маджонг', match3:'Три в ряд', puzzle:'Пазлы', coloring:'Раскраска', memory:'Мемори', catch:'Звёздочки', count:'Посчитай', shadow:'Тени'};
+const GAME_TITLES={mahjong:'Маджонг', match3:'Три в ряд', puzzle:'Пазлы', coloring:'Раскраска', memory:'Мемори', catch:'Звёздочки', count:'Посчитай', shadow:'Тени', chapaev:'Чапаев'};
+const GAME_ICONS={mahjong:'🎨', match3:'🍬', singers:'🎶', puzzle:'🧩', coloring:'🖌️', memory:'🃏', catch:'⭐', count:'🔢', shadow:'👥', chapaev:'♟️'};
+const LEVEL_LABELS={chapaev:['😎 Легко','😠 Норма','😈 Сложно','👥 С другом']};
 function savedLevelOf(game){
   return game==='mahjong'?save.mj.level:(game==='match3'?save.m3.level:getMini(game).level);
 }
@@ -2484,6 +2591,7 @@ function levelCountOf(game){
   if(game==='mahjong') return Math.max(save.mj.level+4, 10);
   if(game==='match3') return Math.max(save.m3.level+4, 10);
   if(game==='memory') return 2;
+  if(game==='chapaev') return 4;
   return 3;
 }
 function showLevelSelect(game){
@@ -2493,7 +2601,8 @@ function showLevelSelect(game){
   let chips='';
   for(let i=0;i<N;i++){
     const st=starsOf(game,i);
-    chips+=`<button class="lvl-chip${i===saved?' next':''}" data-lvl="${i}">${i+1}<span class="st">${st?'⭐'.repeat(st):'···'}</span></button>`;
+    const lbl=(LEVEL_LABELS[game]&&LEVEL_LABELS[game][i])||String(i+1);
+    chips+=`<button class="lvl-chip${i===saved?' next':''}" data-lvl="${i}">${esc(lbl)}<span class="st">${st?'⭐'.repeat(st):'···'}</span></button>`;
   }
   elOverlay.innerHTML=`
     <h1>${GAME_TITLES[game]||'Игра'}</h1>
@@ -3235,7 +3344,291 @@ const shadowG={
   }
 };
 
-const GAME_MAP={mahjong, match3, singers, puzzle, coloring, memory, catch:starCatch, count:countG, shadow:shadowG};
+/* ---------- ЧАПАЕВ: шашки-стрелялки ---------- */
+const chapaev={
+  state:'idle', mode:'pve', level:0, turn:'P', pieces:[], drag:null,
+  boardX:0, boardY:0, boardW:0, boardH:0, r:24, _pb:null,
+  thinkT:0, moveT:0, ownLost:0, lastHit:0, bound:false,
+
+  start(level){
+    currentGame='chapaev';
+    this.level=clamp(level,0,3);
+    this.mode=this.level===3?'pvp':'pve';
+    this.pieces=[]; this.drag=null; this.thinkT=0; this.moveT=0; this.ownLost=0;
+    this.turn='P'; this._pb=null;
+    miniUI(); ambient.set(THEMES[0]);
+    this.bindInput();
+    this.layout();
+    // расстановка: у котика 2 ряда сверху, у игрока 2 ряда снизу
+    const bw=this.boardW, bh=this.boardH, bx=this.boardX, by=this.boardY, r=this.r;
+    for(let i=0;i<4;i++){
+      const x=bx+bw*(i+0.5)/4;
+      this.pieces.push({side:'E', ch:5, x, y:by+bh*0.12, homeX:x, homeY:by+bh*0.12, vx:0, vy:0, out:false});
+      this.pieces.push({side:'E', ch:5, x, y:by+bh*0.12+r*2.8, homeX:x, homeY:by+bh*0.12+r*2.8, vx:0, vy:0, out:false});
+      this.pieces.push({side:'P', ch:0, x, y:by+bh*0.88, homeX:x, homeY:by+bh*0.88, vx:0, vy:0, out:false});
+      this.pieces.push({side:'P', ch:0, x, y:by+bh*0.88-r*2.8, homeX:x, homeY:by+bh*0.88-r*2.8, vx:0, vy:0, out:false});
+    }
+    this.state='aim';
+    this.syncHud();
+    showHint(this.mode==='pvp'?'Двое за одним устройством! Тяни свою шашку назад и отпускай 🎯':'Тяни синюю шашку назад и отпускай — сбей оранжевых! 🎯',4200);
+  },
+  bindInput(){
+    if(this.bound) return; this.bound=true;
+    const canvas=document.getElementById('game');
+    canvas.addEventListener('pointermove',e=>{
+      if(currentGame!=='chapaev'||!this.drag) return;
+      const r=canvas.getBoundingClientRect();
+      this.drag.cx=e.clientX-r.left; this.drag.cy=e.clientY-r.top;
+    });
+    canvas.addEventListener('pointerup',e=>{
+      if(currentGame!=='chapaev'||!this.drag) return;
+      const r=canvas.getBoundingClientRect();
+      this.release(e.clientX-r.left, e.clientY-r.top);
+    });
+  },
+  layout(){
+    const bw=clamp(W-56,260,560);
+    const bh=clamp(H-235,300,Math.min(bw*1.32,640));
+    const bx=(W-bw)/2;
+    const by=Math.max(100,100+(H-190-bh)/2);
+    if(this._pb&&(this._pb.w!==bw||this._pb.h!==bh||this._pb.x!==bx||this._pb.y!==by)){
+      const kx=bw/this._pb.w, ky=bh/this._pb.h;
+      for(const p of this.pieces){
+        p.x=bx+(p.x-this._pb.x)*kx; p.y=by+(p.y-this._pb.y)*ky;
+        p.homeX=bx+(p.homeX-this._pb.x)*kx; p.homeY=by+(p.homeY-this._pb.y)*ky;
+      }
+    }
+    this._pb={x:bx,y:by,w:bw,h:bh};
+    this.boardX=bx; this.boardY=by; this.boardW=bw; this.boardH=bh;
+    this.r=clamp(bw/13,16,30);
+  },
+  syncHud(){
+    const blue=this.pieces.filter(p=>p.side==='P'&&!p.out).length;
+    const org=this.pieces.filter(p=>p.side==='E'&&!p.out).length;
+    let who;
+    if(this.mode==='pvp') who=this.turn==='P'?'Ход СИНИХ':'Ход ОРАНЖЕВЫХ';
+    else who=this.turn==='P'?'ТВОЙ ХОД':'Котики целятся…';
+    setHudProgress(`Чапаев · Синих ${blue} : ${org} Оранжевых · ${who}`);
+  },
+  handleClick(px,py){
+    if(this.state!=='aim') return;
+    if(this.mode==='pve'&&this.turn==='E') return;
+    for(const p of this.pieces){
+      if(p.out||p.side!==this.turn) continue;
+      if(Math.hypot(px-p.x,py-p.y)<this.r+10){
+        this.drag={p,cx:px,cy:py}; sfxClick(); return;
+      }
+    }
+  },
+  release(px,py){
+    const p=this.drag.p;
+    const dx=p.x-px, dy=p.y-py;
+    const d=Math.hypot(dx,dy);
+    this.drag=null;
+    if(d<14){ this.syncHud(); return; }
+    const pow=Math.min(d,175)*5.1;
+    p.vx=dx/d*pow; p.vy=dy/d*pow;
+    this.state='moving'; this.moveT=0;
+    sfxClick();
+  },
+  aiMove(){
+    const err=[0.4,0.18,0.07][this.level]||0.2;
+    const my=this.pieces.filter(p=>p.side==='E'&&!p.out);
+    const tg=this.pieces.filter(p=>p.side==='P'&&!p.out);
+    if(!my.length||!tg.length){ this.endTurn(); return; }
+    let best=null;
+    for(const m of my)for(const t of tg){
+      const d=Math.hypot(m.x-t.x,m.y-t.y);
+      const score=d+Math.random()*err*600;
+      if(!best||score<best.score) best={m,t,score};
+    }
+    const m=best.m, t=best.t;
+    let dx=t.x-m.x, dy=t.y-m.y;
+    const L=Math.hypot(dx,dy)||1;
+    const ang=(Math.random()-0.5)*err*2;
+    const ca=Math.cos(ang), sa=Math.sin(ang);
+    const ndx=dx*ca-dy*sa, ndy=dx*sa+dy*ca;
+    const NL=Math.hypot(ndx,ndy)||1;
+    const pow=clamp(320+L*2.4,520,1250)*(0.9+Math.random()*0.25);
+    m.vx=ndx/NL*pow; m.vy=ndy/NL*pow;
+    this.state='moving'; this.moveT=0;
+    sfxClick();
+  },
+  freeHome(side, p){
+    const homes=this.pieces.filter(q=>q.side===side).map(q=>({x:q.homeX,y:q.homeY}));
+    const taken=(x,y)=>this.pieces.some(q=>!q.out&&Math.hypot(q.x-x,q.y-y)<this.r*2.05);
+    if(!taken(p.homeX,p.homeY)) return {x:p.homeX,y:p.homeY};
+    for(const h of homes){ if(!taken(h.x,h.y)) return h; }
+    return {x:p.homeX,y:p.homeY};
+  },
+  endTurn(){
+    const mover=this.turn;
+    const other=mover==='P'?'E':'P';
+    const otherAlive=this.pieces.filter(p=>p.side===other&&!p.out).length;
+    if(this.mode==='pve'){
+      if(other==='E'&&otherAlive===0){
+        const stars=this.ownLost===0?3:(this.ownLost<=2?2:1);
+        this.state='over'; sfxWin(); FX.spawnConfetti();
+        setTimeout(()=>showWin('chapaev',this.level,stars,`Потеряно своих: ${this.ownLost}`),900);
+        return;
+      }
+      if(other==='P'&&otherAlive===0){
+        this.state='over';
+        setTimeout(()=>showLose('chapaev',this.level,'Котики выбили все твои шашки!'),700);
+        return;
+      }
+      this.turn=other;
+      if(this.turn==='E') this.thinkT=0.8;
+      this.state='aim'; this.syncHud();
+    } else {
+      if(otherAlive===0){ this.state='over'; this.pvpWin(mover); return; }
+      this.turn=other; this.state='aim'; this.syncHud();
+    }
+  },
+  pvpWin(winnerSide){
+    const name=winnerSide==='P'?'СИНИЕ':'ОРАНЖЕВЫЕ';
+    sfxWin(); FX.spawnConfetti();
+    elOverlay.innerHTML=`
+      <h1>🏆 Победили ${name}!</h1>
+      <div class="ostars">🎉🎉🎉</div>
+      <div class="btn-row">
+        <button class="next-btn" id="againBtn">🔄 Ещё раз</button>
+        <button class="next-btn secondary" id="menuBtn2">🏠 В меню</button>
+      </div>`;
+    elOverlay.classList.remove('hidden');
+    document.getElementById('againBtn').addEventListener('click',()=>chapaev.start(3));
+    document.getElementById('menuBtn2').addEventListener('click',showMenu);
+  },
+  update(dt){
+    if(this.state==='aim'&&this.mode==='pve'&&this.turn==='E'){
+      this.thinkT-=dt;
+      if(this.thinkT<=0){ this.thinkT=0; this.aiMove(); }
+    }
+    if(this.state!=='moving') return;
+    this.moveT+=dt;
+    const sub=2, h=dt/sub;
+    for(let s2=0;s2<sub;s2++){
+      for(const p of this.pieces){
+        if(p.out) continue;
+        p.x+=p.vx*h; p.y+=p.vy*h;
+        const f=Math.exp(-1.7*h);
+        p.vx*=f; p.vy*=f;
+      }
+      const alive=this.pieces.filter(p=>!p.out);
+      for(let i=0;i<alive.length;i++)for(let j=i+1;j<alive.length;j++){
+        const a=alive[i], b=alive[j];
+        const dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy)||0.001;
+        if(d<this.r*2){
+          const nx=dx/d, ny=dy/d, ov=(this.r*2-d)/2;
+          a.x-=nx*ov; a.y-=ny*ov; b.x+=nx*ov; b.y+=ny*ov;
+          const rvx=b.vx-a.vx, rvy=b.vy-a.vy, vn=rvx*nx+rvy*ny;
+          if(vn<0){
+            const imp=-vn*0.96;
+            a.vx-=nx*imp; a.y-=ny*imp; b.vx+=nx*imp; b.vy+=ny*imp;
+            if(imp>70){
+              const now=performance.now()/1000;
+              if(now-this.lastHit>0.06){ this.lastHit=now; sfxPop(2); }
+            }
+          }
+        }
+      }
+      for(const p of this.pieces){
+        if(p.out) continue;
+        if(p.x<this.boardX-this.r*0.5||p.x>this.boardX+this.boardW+this.r*0.5||p.y<this.boardY-this.r*0.5||p.y>this.boardY+this.boardH+this.r*0.5){
+          if(p.side===this.turn){
+            this.ownLost++;
+            const spot=this.freeHome(p.side,p);
+            p.x=spot.x; p.y=spot.y; p.vx=0; p.vy=0;
+            FX.popup(clamp(p.x,this.boardX+40,this.boardX+this.boardW-40),clamp(p.y,this.boardY+30,this.boardY+this.boardH-30),'Вернулась 🔄','#7a3d1a',13);
+          } else {
+            p.out=true;
+            const who=this.turn==='P'?'Ты выбил! +1':'Котик выбил';
+            FX.popup(clamp(p.x,this.boardX+40,this.boardX+this.boardW-40),clamp(p.y,this.boardY+30,this.boardY+this.boardH-30),who,this.turn==='P'?'#2e7a2e':'#e85a2a',15);
+            sfxPop(4);
+          }
+          this.syncHud();
+        }
+      }
+    }
+    const moving=this.pieces.some(p=>!p.out&&(Math.abs(p.vx)>12||Math.abs(p.vy)>12));
+    if(!moving||this.moveT>7){
+      for(const p of this.pieces){ p.vx=0; p.vy=0; }
+      this.endTurn();
+    }
+  },
+  render(t){
+    this.layout();
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#e8f0d8'); bg.addColorStop(1,'#c8ddb0');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    ambient.update(1/60); ambient.draw(t);
+    // рамка-стол
+    ctx.fillStyle='#8a5a2a';
+    roundRect(ctx,this.boardX-14,this.boardY-14,this.boardW+28,this.boardH+28,16); ctx.fill();
+    // клетчатое поле
+    const cols=8, rows=6, cw=this.boardW/cols, chh=this.boardH/rows;
+    for(let r2=0;r2<rows;r2++)for(let cc=0;cc<cols;cc++){
+      ctx.fillStyle=(r2+cc)%2===0?'#f0e6c8':'#dccfa8';
+      ctx.fillRect(this.boardX+cc*cw,this.boardY+r2*chh,cw+0.5,chh+0.5);
+    }
+    // подсветка шашек текущего хода
+    if(this.state==='aim'){
+      const pulse=0.5+0.4*Math.sin(t*6);
+      for(const p of this.pieces){
+        if(p.out||p.side!==this.turn) continue;
+        ctx.strokeStyle=`rgba(255,183,3,${pulse})`;
+        ctx.lineWidth=4;
+        ctx.beginPath(); ctx.arc(p.x,p.y,this.r+5,0,TAU); ctx.stroke();
+      }
+    }
+    // шашки
+    for(const p of this.pieces){
+      if(p.out) continue;
+      ctx.fillStyle='rgba(0,0,0,.18)';
+      ctx.beginPath(); ctx.ellipse(p.x,p.y+this.r*0.25,this.r*0.95,this.r*0.5,0,0,TAU); ctx.fill();
+      {
+        ctx.save();
+        ctx.beginPath(); ctx.arc(p.x,p.y,this.r*0.88,0,TAU); ctx.clip();
+        ctx.fillStyle=p.side==='P'?'#dfe9f5':'#ffe3c2';
+        ctx.fillRect(p.x-this.r,p.y-this.r,this.r*2,this.r*2);
+        ctx.translate(p.x,p.y+this.r*0.3);
+        ctx.scale(this.r/52,this.r/52);
+        CHARACTERS[p.ch].draw(ctx,1,0.9);
+        ctx.restore();
+      }
+      ctx.lineWidth=(this.state==='aim'&&p.side===this.turn)?3.5:3;
+      ctx.strokeStyle=p.side==='P'?'#2c6ec2':'#e8702a';
+      ctx.beginPath(); ctx.arc(p.x,p.y,this.r,0,TAU); ctx.stroke();
+    }
+    // прицел при натяжении
+    if(this.drag){
+      const p=this.drag.p;
+      const dx=p.x-this.drag.cx, dy=p.y-this.drag.cy;
+      const d=Math.hypot(dx,dy);
+      ctx.strokeStyle='rgba(80,80,80,.5)'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(this.drag.cx,this.drag.cy); ctx.stroke();
+      if(d>6){
+        const pow=Math.min(d,175), len=pow*1.5;
+        const nx=dx/d, ny=dy/d;
+        ctx.setLineDash([9,9]);
+        ctx.strokeStyle='rgba(255,90,60,.95)'; ctx.lineWidth=4; ctx.lineCap='round';
+        ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+nx*len,p.y+ny*len); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle='rgba(255,90,60,.95)';
+        ctx.beginPath(); ctx.arc(p.x+nx*len,p.y+ny*len,7,0,TAU); ctx.fill();
+      }
+    }
+    FX.draw(t);
+  }
+};
+
+const GAME_MAP={mahjong, match3, singers, puzzle, coloring, memory, catch:starCatch, count:countG, shadow:shadowG, chapaev};
+// счётчик запусков каждой игры
+for(const __k in GAME_MAP){
+  const __g=GAME_MAP[__k];
+  const __orig=__g.start.bind(__g);
+  __g.start=function(l){ LB.countPlay(__k); return __orig(l); };
+}
 
 /* ================= МЕНЮ ФОН ================= */
 const MENU_SPOTS=[[.1,.16],[.9,.2],[.06,.5],[.94,.55],[.12,.86],[.88,.86],[.5,.07]];
@@ -3328,6 +3721,7 @@ resize();
 ambient.set(THEMES[0]);
 updateMenuProg();
 buildShopDOM();
+LB.trackVisit();
 preloadCharacterImages();
 requestAnimationFrame(loop);
 
