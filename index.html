@@ -2569,46 +2569,21 @@ function buildShopDOM(){
 
 
 function esc(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-/* ================= ОНЛАЙН-РЕЙТИНГ (perchance server-plugin) =================
-   Общий топ звёзд, счётчики запусков игр и отзывы живут на сервере генератора.
-   Вне perchance.org или без сети — тихий откат на локальную таблицу. */
+/* ================= ОНЛАЙН-РЕЙТИНГ (Google Таблицы через Apps Script) =================
+   Общий топ звёзд, счётчики запусков игр и отзывы хранятся в Google-таблице.
+   Вставь ниже URL своего Web App. Пока URL не вставлен или нет сети —
+   тихий откат на локальную таблицу. */
+const STATS_URL = "https://script.google.com/macros/s/AKfycbwFkZ6noCkhCTK-jwKWB418JSfpkOSMS3pkbAHgabO_JhUNUDwXyJeihLKrbknzgtCf/exec";
 const Net={
-  sock:null, dead:false, opening:null,
-  ensure(){
-    if(this.sock && this.sock.readyState===1) return Promise.resolve(true);
-    if(this.dead) return Promise.resolve(false);
-    if(this.opening) return this.opening;
-    const self=this;
-    this.opening=new Promise((res)=>{
-      let s=null;
-      try{
-        const mk=(typeof root!=="undefined" && root.createServerSocket)?root.createServerSocket:null;
-        if(!mk){ self.dead=true; self.opening=null; res(false); return; }
-        s=mk();
-      }catch(e){ self.dead=true; self.opening=null; res(false); return; }
-      let settled=false;
-      const done=(ok)=>{
-        if(settled) return; settled=true;
-        clearTimeout(to);
-        if(ok){ self.sock=s; } else { try{ s.close(); }catch(e){} }
-        self.opening=null;
-        res(ok);
-      };
-      const to=setTimeout(()=>done(false), 8000);
-      s.addEventListener("open",()=>done(true));
-      s.addEventListener("close",(ev)=>{
-        if(ev && ev.code===4403) self.dead=true; // вставка на чужом сайте: онлайна не будет
-        if(self.sock===s) self.sock=null;
-        done(false);
-        if(!self.dead) setTimeout(()=>{ if(!self.sock && !self.opening) self.ensure(); }, 2500);
-      });
-      s.addEventListener("error",()=>{});
-    });
-    return this.opening;  },
-  rpc(method,data){
-    return this.ensure().then((ok)=>{
-      if(!ok || !this.sock || this.sock.readyState!==1) throw new Error("offline");
-      return this.sock.rpc[method](data);
+  rpc(action, data){
+    if(!STATS_URL || STATS_URL.indexOf('ВСТАВЬ_СВОЙ_ID')!==-1) return Promise.reject(new Error('no_stats_url'));
+    return fetch(STATS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: action, data: data })
+    }).then((r)=>{
+      if(!r.ok) throw new Error('http '+r.status);
+      return r.json();
     });
   }
 };
@@ -2616,6 +2591,13 @@ const LB={
   cache:{board:[], stats:null, plays:null},
   playerName(){ try{ return localStorage.getItem('kids_lb_name')||''; }catch(e){ return ''; } },
   setPlayerName(n){ try{ localStorage.setItem('kids_lb_name',n); }catch(e){} },
+  deviceId(){
+    try{
+      let id=localStorage.getItem('kids_lb_uid');
+      if(!id){ id='u'+Math.random().toString(36).slice(2,10)+Date.now().toString(36); localStorage.setItem('kids_lb_uid',id); }
+      return id;
+    }catch(e){ return 'anon'; }
+  },
   totalStars(){ return totalStars(save.mj)+totalStars(save.m3)+Object.values(save.mini).reduce((s,m)=>s+totalStars(m),0); },
   localBoard(){ try{ return JSON.parse(localStorage.getItem('kids_lb_local')||'[]'); }catch(e){ return []; } },
   localSubmit(name,stars){
@@ -2629,56 +2611,48 @@ const LB={
     return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   },
   submit(name, stars, cb){
-    Net.rpc("submit", JSON.stringify({name:String(name).slice(0,12), stars:Math.max(0,Math.min(999,stars|0))})).then(
-      (rep)=>{
-        try{ const o=JSON.parse(rep); if(o&&o.board) this.cache.board=o.board; cb(true); }
-        catch(e){ this.localSubmit(name,stars); cb(false); }
-      },
+    Net.rpc("submit", {name:String(name).slice(0,12), stars:Math.max(0,Math.min(999,stars|0))}).then(
+      (o)=>{ if(o&&o.board){ this.cache.board=o.board; cb(true); } else { this.localSubmit(name,stars); cb(false); } },
       ()=>{ this.localSubmit(name,stars); cb(false); });
   },
   top(cb){
-    Net.rpc("getAll", this.todayStr()).then(
-      (rep)=>{
-        try{
-          const o=JSON.parse(rep);
-          this.cache.board=o.board||[]; this.cache.stats=o.stats||null; this.cache.plays=o.plays||null;
-          cb(this.cache.board, true);
-        }catch(e){ cb(this.localBoard(), false); }
+    Net.rpc("getAll", {day:this.todayStr()}).then(
+      (o)=>{
+        this.cache.board=(o&&o.board)||[]; this.cache.stats=(o&&o.stats)||null; this.cache.plays=(o&&o.plays)||null;
+        cb(this.cache.board, true);
       },
       ()=>{ cb(this.localBoard(), false); });
   },
   trackVisit(){
-    Net.rpc("visit", this.todayStr()).then(
-      (rep)=>{
-        try{
-          const o=JSON.parse(rep);
-          this.cache.board=o.board||[]; this.cache.stats=o.stats||null; this.cache.plays=o.plays||null;
-        }catch(e){}
+    Net.rpc("visit", {day:this.todayStr(), uid:this.deviceId()}).then(
+      (o)=>{
+        if(!o) return;
+        this.cache.board=o.board||[]; this.cache.stats=o.stats||null; this.cache.plays=o.plays||null;
       }, ()=>{});
   },
   countPlay(key){
     try{ save.plays[key]=(save.plays[key]||0)+1; persist(); }catch(e){}
-    Net.rpc("play", key).then(
-      (rep)=>{ try{ const o=JSON.parse(rep); if(o&&o.plays) this.cache.plays=o.plays; }catch(e){} },
+    Net.rpc("play", {game:key}).then(
+      (o)=>{ if(o&&o.plays) this.cache.plays=o.plays; },
       ()=>{});
   },
   readPlays(cb){
     if(this.cache.plays){ cb(this.cache.plays); return; }
-    Net.rpc("getAll", this.todayStr()).then(
-      (rep)=>{ try{ const o=JSON.parse(rep); this.cache.plays=o.plays||{}; cb(this.cache.plays); }catch(e){ cb(null); } },
+    Net.rpc("getAll", {day:this.todayStr()}).then(
+      (o)=>{ this.cache.plays=(o&&o.plays)||{}; cb(this.cache.plays); },
       ()=>cb(null));
   },
   sendFeedback(text, cb){
     const clean=String(text||'').trim().slice(0,200);
     if(!clean){ cb(false); return; }
     const name=this.playerName()||'аноним';
-    Net.rpc("feedback", JSON.stringify({name:String(name).slice(0,12), text:clean, stars:this.totalStars()||0})).then(
+    Net.rpc("feedback", {name:String(name).slice(0,12), text:clean, stars:this.totalStars()||0}).then(
       ()=>cb(true), ()=>cb(false));
   },
   readStats(cb){
     if(this.cache.stats){ cb(this.cache.stats); return; }
-    Net.rpc("getAll", this.todayStr()).then(
-      (rep)=>{ try{ const o=JSON.parse(rep); this.cache.stats=o.stats||null; cb(this.cache.stats); }catch(e){ cb(null); } },
+    Net.rpc("getAll", {day:this.todayStr()}).then(
+      (o)=>{ this.cache.stats=(o&&o.stats)||null; cb(this.cache.stats); },
       ()=>cb(null));
   }
 };
