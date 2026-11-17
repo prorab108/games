@@ -13,10 +13,16 @@
   canvas{display:block;touch-action:none;}
 
   /* ========== ГЛАВНОЕ МЕНЮ ========== */
+  /* Важно: justify-content:flex-start + auto-поля вместо center:
+     с center верх длинного контента уходит за экран и его нельзя проскроллить (особенно на телефонах) */
   #menu{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:22px;padding:24px;
+    align-items:center;justify-content:flex-start;gap:22px;box-sizing:border-box;
+    padding:calc(24px + env(safe-area-inset-top,0px)) 24px calc(24px + env(safe-area-inset-bottom,0px));
     background:linear-gradient(160deg,rgba(255,244,224,.92),rgba(255,224,196,.95));
-    z-index:30;text-align:center;overflow-y:auto;}
+    z-index:30;text-align:center;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
+  #menu>*{flex-shrink:0;max-width:100%;box-sizing:border-box;}
+  #menu>:first-child{margin-top:auto;}
+  #menu>:last-child{margin-bottom:auto;}
   #menu.hidden{display:none;}
   #menu h1{font-size:clamp(28px,7.5vw,52px);margin:0;color:#d14d2a;
     line-height:1.1;text-shadow:0 4px 0 rgba(209,77,42,.18);}
@@ -95,7 +101,7 @@
     border-radius:12px;padding:6px 12px;width:min(420px,86vw);margin:0 auto;}
   .lb-note{font-size:12px;color:#a06a3a;max-width:420px;margin:0 auto;line-height:1.4;}
   .lb-sub{font-weight:900;font-size:17px;color:#d14d2a;margin:6px 0 2px;}
-  .lb-fb input{font-family:inherit;font-size:15px;font-weight:700;color:#5a3a7a;
+  .lb-fb input{font-family:inherit;font-size:16px;font-weight:700;color:#5a3a7a;
     text-align:center;padding:9px 12px;border-radius:14px;border:3px solid #4cc9f0;
     outline:none;width:min(340px,80vw);background:rgba(255,255,255,.95);}
 
@@ -118,9 +124,21 @@
   .shop-card.poor{opacity:.45;filter:grayscale(.7);}
 
   /* ========== HUD ========== */
-  #hud{position:fixed;top:0;left:0;right:0;padding:10px 12px;
+  #hud{position:fixed;top:0;left:0;right:0;box-sizing:border-box;
+    padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;
     display:flex;justify-content:space-between;align-items:center;
     gap:8px;pointer-events:none;z-index:10;flex-wrap:wrap;}
+  /* Компактный HUD на телефонах: иначе пилюля и кнопки занимают 2 ряда и закрывают верх игры */
+  @media (max-width:600px){
+    #hud{padding:calc(8px + env(safe-area-inset-top,0px)) 8px 8px;gap:6px;}
+    .pill{padding:7px 12px;font-size:12px;max-width:56vw;overflow:hidden;text-overflow:ellipsis;}
+    .btn{padding:8px 11px;font-size:13px;}
+  }
+  @media (max-height:500px){
+    #menu{gap:14px;}
+    #overlay{gap:12px;}
+    .game-card{padding:14px 16px;}
+  }
   #hud.hidden{display:none;}
   .pill{background:rgba(255,255,255,.94);color:#7a3d1a;font-weight:800;
     padding:8px 16px;border-radius:999px;font-size:clamp(12px,3.2vw,16px);
@@ -135,10 +153,17 @@
   .btn.hidden{display:none;}
 
   /* ========== ОВЕРЛЕЙ ПОБЕДЫ/СТАРТА ========== */
+  /* Важно: justify-content:flex-start + auto-поля вместо center:
+     с center верх длинного контента (рейтинг!) уходит за экран и его нельзя проскроллить */
   #overlay{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:20px;padding:24px;
+    align-items:center;justify-content:flex-start;gap:20px;box-sizing:border-box;
+    padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(20px + env(safe-area-inset-bottom,0px));
     text-align:center;background:rgba(255,240,220,.97);
-    z-index:20;overflow-y:auto;}
+    z-index:20;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+    scroll-padding-top:8px;}
+  #overlay>*{flex-shrink:0;max-width:100%;box-sizing:border-box;}
+  #overlay>:first-child{margin-top:auto;}
+  #overlay>:last-child{margin-bottom:auto;}
   #overlay.hidden{display:none;}
   #overlay h1{font-size:clamp(24px,7vw,44px);margin:0;color:#d14d2a;
     line-height:1.1;text-shadow:0 3px 0 rgba(209,77,42,.15);}
@@ -163,7 +188,7 @@
     box-shadow:0 6px 0 #909090;color:#5a3a20;}
 
   /* ========== ПОДСКАЗКА ========== */
-  #hint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+  #hint{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);
     color:#7a3d1a;font-size:clamp(12px,3.2vw,15px);font-weight:700;
     background:rgba(255,255,255,.95);
     padding:8px 18px;
@@ -250,7 +275,7 @@
     </button>
   </div>
   <button id="resetBtn" class="reset-link">Сбросить прогресс</button>
-  <div class="ver">v3.0</div>
+  <div class="ver">v3.1 • онлайн</div>
 </div>
 
 <!-- ========== HUD (общий) ========== -->
@@ -272,6 +297,167 @@
 
 <!-- ========== МАГАЗИН МОНСТРОВ ========== -->
 <div id="shop" class="hidden"><div id="shop-cards"></div></div>
+
+<script type="text/x-server-plugin">
+// Онлайн-рейтинг «Детских игр»: общий топ звёзд, счётчики запусков, отзывы.
+// Состояние: [uint32 LE длина JSON][UTF-8 JSON {v,visits,days,games,board,fb,uniq}].
+// Всё остальное ниже (лимиты) — временный кэш, перестраивается после перезапуска.
+var BOARD_MAX = 200;
+var FB_MAX = 80;
+var DAYS_MAX = 60;
+var UNIQ_MAX = 3000;
+var GAMES = ["mahjong","match3","singers","puzzle","coloring","memory","catch","count","shadow","chapaev"];
+
+function lbBlank() { return { v:1, visits:0, days:{}, games:{}, board:[], fb:[], uniq:[] }; }
+
+function lbLoad() {
+  var blank = lbBlank();
+  var n = 0;
+  try { n = new DataView(state.buffer, state.byteOffset, 4).getUint32(0, true); }
+  catch (e) { return blank; }
+  if (!n || n > state.length - 4) return blank;
+  try {
+    var o = JSON.parse(new TextDecoder().decode(new Uint8Array(state.buffer, state.byteOffset + 4, n)));
+    if (!o || o.v !== 1) return blank;
+    if (typeof o.visits !== "number" || !(o.visits >= 0)) o.visits = 0;
+    if (!o.days || typeof o.days !== "object") o.days = {};
+    if (!o.games || typeof o.games !== "object") o.games = {};
+    if (!Array.isArray(o.board)) o.board = [];
+    if (!Array.isArray(o.fb)) o.fb = [];
+    if (!Array.isArray(o.uniq)) o.uniq = [];
+    return o;
+  } catch (e) { return blank; }
+}
+
+function lbSave(o) {
+  var enc = new TextEncoder();
+  var bytes = enc.encode(JSON.stringify(o));
+  var guard = 0;
+  while (bytes.length > state.length - 4 && guard++ < 10) {
+    if (o.fb.length > 10) o.fb = o.fb.slice(o.fb.length - 10);
+    else if (o.board.length > 10) o.board = o.board.slice(0, 10);
+    else if (o.uniq.length > 100) o.uniq = o.uniq.slice(o.uniq.length - 100);
+    else { o.days = {}; }
+    bytes = enc.encode(JSON.stringify(o));
+  }
+  if (bytes.length > state.length - 4) throw new Error("state_full");
+  new DataView(state.buffer, state.byteOffset, 4).setUint32(0, bytes.length, true);
+  state.set(bytes, 4);
+}
+
+// Простые лимиты: на соединение и на примерную подсеть (conn.net[3]).
+// Эфемерные — сброс лишь временно ослабляет защиту, данные в state не трогает.
+var rlStore = {};
+var rlKeys = 0;
+function rlHit(key, now) {
+  var a = rlStore[key];
+  if (!a) {
+    if (rlKeys > 20000) { rlStore = {}; rlKeys = 0; }
+    a = []; rlStore[key] = a; rlKeys++;
+  }
+  a.push(now);
+  if (a.length > 60) a.splice(0, a.length - 60);
+}
+function rlCount(key, now, win) {
+  var a = rlStore[key];
+  if (!a) return 0;
+  var c = 0;
+  for (var i = a.length - 1; i >= 0; i--) { if (now - a[i] < win) c++; else break; }
+  return c;
+}
+function rlCheck(conn, kind, now) {
+  var rules;
+  if (kind === "visit") rules = [["c",3,60000],["n",30,3600000]];
+  else if (kind === "get") rules = [["c",30,60000]];
+  else if (kind === "play") rules = [["c",40,60000],["n",400,3600000]];
+  else if (kind === "submit") rules = [["c",5,60000],["n",30,3600000]];
+  else rules = [["c",3,3600000],["n",15,3600000]];
+  for (var i = 0; i < rules.length; i++) {
+    var key = rules[i][0] === "c" ? ("c:" + conn.id + ":" + kind) : ("n:" + conn.net[3] + ":" + kind);
+    if (rlCount(key, now, rules[i][2]) >= rules[i][1]) return true;
+    rlHit(key, now);
+  }
+  return false;
+}
+
+function lbTop(o) {
+  var b = o.board.slice().sort(function(a, c) { return c.s - a.s; }).slice(0, 10);
+  var out = [];
+  for (var i = 0; i < b.length; i++) out.push({ name: b[i].n, stars: b[i].s });
+  return out;
+}
+function lbStats(o, day) {
+  var seen = {};
+  var u = 0;
+  for (var i = 0; i < o.uniq.length; i++) { if (!seen[o.uniq[i]]) { seen[o.uniq[i]] = 1; u++; } }
+  return { total: o.visits, today: (day && o.days[day]) || 0, unique: u };
+}
+function lbDayOk(d) { return typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d); }
+
+self.rpc = {
+  visit: function(ctx, data) {
+    var now = Date.now();
+    if (rlCheck(ctx.conn, "visit", now)) throw new Error("rate_limited");
+    if (!lbDayOk(data)) throw new Error("bad_day");
+    var o = lbLoad();
+    o.visits++;
+    o.days[data] = (o.days[data] || 0) + 1;
+    var ks = Object.keys(o.days);
+    if (ks.length > DAYS_MAX) { ks.sort(); for (var i = 0; i < ks.length - DAYS_MAX; i++) delete o.days[ks[i]]; }
+    var h = ctx.conn.net[3];
+    if (o.uniq.indexOf(h) === -1) { o.uniq.push(h); if (o.uniq.length > UNIQ_MAX) o.uniq.splice(0, o.uniq.length - UNIQ_MAX); }
+    lbSave(o);
+    return JSON.stringify({ board: lbTop(o), stats: lbStats(o, data), plays: o.games });
+  },
+  getAll: function(ctx, data) {
+    var now = Date.now();
+    if (rlCheck(ctx.conn, "get", now)) throw new Error("rate_limited");
+    var o = lbLoad();
+    var day = lbDayOk(data) ? data : "";
+    return JSON.stringify({ board: lbTop(o), stats: lbStats(o, day), plays: o.games });
+  },
+  play: function(ctx, data) {
+    var now = Date.now();
+    if (rlCheck(ctx.conn, "play", now)) throw new Error("rate_limited");
+    if (GAMES.indexOf(data) === -1) throw new Error("bad_game");
+    var o = lbLoad();
+    o.games[data] = (o.games[data] || 0) + 1;
+    lbSave(o);
+    return JSON.stringify({ plays: o.games });
+  },
+  submit: function(ctx, data) {
+    var now = Date.now();
+    if (rlCheck(ctx.conn, "submit", now)) throw new Error("rate_limited");
+    var p = null;
+    try { p = JSON.parse(String(data)); } catch (e) { throw new Error("bad_json"); }
+    var name = String((p && p.name) || "").trim().slice(0, 12);
+    var stars = p ? p.stars : -1;
+    if (!name) throw new Error("bad_name");
+    if (typeof stars !== "number" || !(stars >= 0) || !(stars <= 999)) throw new Error("bad_stars");
+    var o = lbLoad();
+    o.board.push({ n: name, s: Math.floor(stars), t: now });
+    o.board.sort(function(a, b) { return b.s - a.s; });
+    if (o.board.length > BOARD_MAX) o.board.length = BOARD_MAX;
+    lbSave(o);
+    return JSON.stringify({ board: lbTop(o) });
+  },
+  feedback: function(ctx, data) {
+    var now = Date.now();
+    if (rlCheck(ctx.conn, "fb", now)) throw new Error("rate_limited");
+    var p = null;
+    try { p = JSON.parse(String(data)); } catch (e) { throw new Error("bad_json"); }
+    var name = String((p && p.name) || "").trim().slice(0, 12) || "аноним";
+    var text = String((p && p.text) || "").trim().slice(0, 200);
+    if (!text) throw new Error("bad_text");
+    var st = (p && typeof p.stars === "number" && p.stars >= 0 && p.stars <= 999) ? Math.floor(p.stars) : 0;
+    var o = lbLoad();
+    o.fb.push({ n: name, x: text, s: st, t: now });
+    if (o.fb.length > FB_MAX) o.fb.splice(0, o.fb.length - FB_MAX);
+    lbSave(o);
+    return "ok";
+  }
+};
+</script>
 
 <script>
 // Диагностика для телефонов: работает даже если основной скрипт сломался
@@ -755,8 +941,18 @@ function updateMenuProg(){
 let toastTimer=null;
 function showHint(text, dur){ elHint.textContent=text; elHint.classList.remove('hidden'); elHint.classList.remove('fade'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>elHint.classList.add('fade'), dur||2500); }
 function hideHint(){ elHint.classList.add('hidden'); }
-function setHudProgress(text){ elHudProgress.textContent=text; }
-function fmtTime(sec){ const m=Math.floor(sec/60), s=Math.floor(sec%60); return m+':'+(s<10?'0':'')+s; }
+ function setHudProgress(text){ elHudProgress.textContent=text; }
+ function fmtTime(sec){ const m=Math.floor(sec/60), s=Math.floor(sec%60); return m+':'+(s<10?'0':'')+s; }
+ /* Низ HUD в px + отступ: canvas-игры отталкиваются от реального HUD,
+    а не от константы — иначе на телефонах с чёлкой/сafe-area и при переносе
+    пилюли на 2 строки верх игры (цели, поле) уезжает под HUD и «не видно сверху». */
+ function hudGap(extra){
+   try{
+     const h=document.getElementById('hud');
+     if(!h||h.classList.contains('hidden')) return extra||0;
+     return Math.ceil(h.getBoundingClientRect().bottom)+(extra==null?10:extra);
+   }catch(e){ return 90; }
+ }
 
 function showMenu(){
   currentGame='menu';
@@ -830,9 +1026,6 @@ function buildShape(name,T,rng){
     while(cnt(w,h)<T){ if(w<14&&rng()<.5) w+=2; else h+=2; }
     const tw=w-4, c0=1+Math.floor(rng()*3);
     cells=[...rectCells(0,0,0,w,h), ...rectCells(1,c0,1,tw,h-2)];
-  } else if(name==='diamond'){
-    let R=2; while(diamondCount(R)<T) R++;
-    cells=diamondCells(R);
   } else { // towers
     let h=4;
     const wA=3+Math.floor(rng()*2), wB=3+Math.floor(rng()*2);
@@ -991,7 +1184,7 @@ const mahjong = {
       const ux=2*t.c+t.layer+2, uy=2*t.r+t.layer+2;
       if(ux>maxUX)maxUX=ux; if(uy>maxUY)maxUY=uy;
     }
-    const topPad=90,bottomPad=70,sidePad=12;
+    const topPad=Math.max(64,hudGap(10)),bottomPad=70,sidePad=12;
     const availW=W-sidePad*2, availH=H-topPad-bottomPad;
     const fieldW=maxUX/2, fieldH=maxUY/2;
     this.CELL=clamp(Math.floor(Math.min(availW/fieldW,availH/fieldH)),18,72);
@@ -1108,8 +1301,7 @@ const mahjong = {
         this.doShuffle(); this.shuffleCooldown=1.2;
       }
     }
-    if(this.state==='complete'&&this.levelCompleteDelay>0){
-      this.levelCompleteDelay-=dt;
+    if(this.state==='complete'&&this.levelCompleteDelay>0){      this.levelCompleteDelay-=dt;
       if(this.levelCompleteDelay<=0){
         const stars=this.starsFor();
         showWin('mahjong',this.currentLevel,stars,`Время: ${fmtTime(this.time)} · Подсказок: ${this.assists}`);
@@ -1225,7 +1417,7 @@ const match3 = {
     return false;
   },
   layout(){
-    const topPad=130,bottomPad=40,sidePad=16;
+    const topPad=hudGap(86),bottomPad=40,sidePad=16;
     const availW=W-sidePad*2, availH=H-topPad-bottomPad;
     this.CELL=Math.floor(Math.min(availW/this.cols,availH/this.rows));
     this.CELL=clamp(this.CELL,26,80);
@@ -1430,7 +1622,7 @@ const match3 = {
     const gw=Math.min(90,W/(n+1));
     const totalW=gw*n;
     const startX=(W-totalW)/2;
-    const y=64;
+    const y=hudGap(30);
     this.goalPos=[];
     for(let i=0;i<n;i++){
       const g=this.goals[i];
@@ -2374,20 +2566,54 @@ function buildShopDOM(){
 }
 
 /* ================= РЕЙТИНГ ================= */
-/* КАК ВКЛЮЧИТЬ ОНЛАЙН-РЕЙТИНГ ДЛЯ ITCH.IO:
-   1) console.firebase.google.com → создать проект → Realtime Database → создать базу
-   2) Правила базы:
-      { "rules": { ".read": true, ".write": true,
-        "leaderboard": { ".indexOn": ["stars"] } } }
-   3) Настройки проекта → «Твои приложения» → Web (</>) → скопировать firebaseConfig
-   4) Вставить его ниже в LB_CONFIG вместо null, файл переименовать в index.html и залить на itch.io
-   Без конфига рейтинг работает локально (сохраняется в браузере). */
-const LB_CONFIG={apiKey:"AIzaSyAfqwnLBb7C3GAhcdKT7h9GD7T74tVjV44",authDomain:"detskie-igry.firebaseapp.com",databaseURL:"https://detskie-igry-default-rtdb.europe-west1.firebasedatabase.app",projectId:"detskie-igry",storageBucket:"detskie-igry.firebasestorage.app",messagingSenderId:"108579482365",appId:"1:108579482365:web:794a9fe71902f94692ac94"};
-// Пример: const LB_CONFIG={apiKey:"AIza...",authDomain:"xxx.firebaseapp.com",databaseURL:"https://xxx-default-rtdb.firebaseio.com",projectId:"xxx",storageBucket:"xxx.appspot.com",messagingSenderId:"123",appId:"1:123:web:abc"};
+
 
 function esc(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+/* ================= ОНЛАЙН-РЕЙТИНГ (perchance server-plugin) =================
+   Общий топ звёзд, счётчики запусков игр и отзывы живут на сервере генератора.
+   Вне perchance.org или без сети — тихий откат на локальную таблицу. */
+const Net={
+  sock:null, dead:false, opening:null,
+  ensure(){
+    if(this.sock && this.sock.readyState===1) return Promise.resolve(true);
+    if(this.dead) return Promise.resolve(false);
+    if(this.opening) return this.opening;
+    const self=this;
+    this.opening=new Promise((res)=>{
+      let s=null;
+      try{
+        const mk=(typeof root!=="undefined" && root.createServerSocket)?root.createServerSocket:null;
+        if(!mk){ self.dead=true; self.opening=null; res(false); return; }
+        s=mk();
+      }catch(e){ self.dead=true; self.opening=null; res(false); return; }
+      let settled=false;
+      const done=(ok)=>{
+        if(settled) return; settled=true;
+        clearTimeout(to);
+        if(ok){ self.sock=s; } else { try{ s.close(); }catch(e){} }
+        self.opening=null;
+        res(ok);
+      };
+      const to=setTimeout(()=>done(false), 8000);
+      s.addEventListener("open",()=>done(true));
+      s.addEventListener("close",(ev)=>{
+        if(ev && ev.code===4403) self.dead=true; // вставка на чужом сайте: онлайна не будет
+        if(self.sock===s) self.sock=null;
+        done(false);
+        if(!self.dead) setTimeout(()=>{ if(!self.sock && !self.opening) self.ensure(); }, 2500);
+      });
+      s.addEventListener("error",()=>{});
+    });
+    return this.opening;  },
+  rpc(method,data){
+    return this.ensure().then((ok)=>{
+      if(!ok || !this.sock || this.sock.readyState!==1) throw new Error("offline");
+      return this.sock.rpc[method](data);
+    });
+  }
+};
 const LB={
-  ready:false, loading:null, err:null,
+  cache:{board:[], stats:null, plays:null},
   playerName(){ try{ return localStorage.getItem('kids_lb_name')||''; }catch(e){ return ''; } },
   setPlayerName(n){ try{ localStorage.setItem('kids_lb_name',n); }catch(e){} },
   totalStars(){ return totalStars(save.mj)+totalStars(save.m3)+Object.values(save.mini).reduce((s,m)=>s+totalStars(m),0); },
@@ -2398,107 +2624,62 @@ const LB={
     b.sort((a,b2)=>b2.stars-a.stars);
     try{ localStorage.setItem('kids_lb_local', JSON.stringify(b.slice(0,10))); }catch(e){}
   },
-  ensureFirebase(){
-    if(this.ready) return Promise.resolve(true);
-    if(!LB_CONFIG) return Promise.resolve(false);
-    if(this.loading) return this.loading;
-    this.loading=new Promise(res=>{
-      const s1=document.createElement('script');
-      s1.src='https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js';
-      s1.onload=()=>{
-        const s2=document.createElement('script');
-        s2.src='https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js';
-        s2.onload=()=>{
-          try{
-            firebase.initializeApp(LB_CONFIG);
-            this.db=firebase.database();
-            this.ready=true; res(true);
-          }catch(e){ this.err=String(e); res(false); }
-        };
-        s2.onerror=()=>{ this.err='cdn'; res(false); };
-        document.head.appendChild(s2);
-      };
-      s1.onerror=()=>{ this.err='cdn'; res(false); };
-      document.head.appendChild(s1);
-    });
-    return this.loading;
+  todayStr(){
+    const d=new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   },
   submit(name, stars, cb){
-    if(!this.ready){ this.localSubmit(name,stars); cb(false); return; }
-    try{
-      this.db.ref('leaderboard').push(
-        {name:String(name).slice(0,12), stars:Math.max(0,Math.min(999,stars|0)), ts:Date.now()},
-        err=>{ if(err){ this.localSubmit(name,stars); cb(false); } else cb(true); }
-      );
-    }catch(e){ this.localSubmit(name,stars); cb(false); }
+    Net.rpc("submit", JSON.stringify({name:String(name).slice(0,12), stars:Math.max(0,Math.min(999,stars|0))})).then(
+      (rep)=>{
+        try{ const o=JSON.parse(rep); if(o&&o.board) this.cache.board=o.board; cb(true); }
+        catch(e){ this.localSubmit(name,stars); cb(false); }
+      },
+      ()=>{ this.localSubmit(name,stars); cb(false); });
   },
   top(cb){
-    if(!this.ready){ cb(this.localBoard(), false); return; }
-    try{
-      this.db.ref('leaderboard').orderByChild('stars').limitToLast(10).once('value',
-        snap=>{
-          const rows=[]; snap.forEach(ch=>{ const v=ch.val()||{}; rows.push({name:v.name||'???', stars:v.stars||0}); });
-          rows.sort((a,b)=>b.stars-a.stars);
-          cb(rows, true);
-        },
-        ()=>{ cb(this.localBoard(), false); });
-    }catch(e){ cb(this.localBoard(), false); }
+    Net.rpc("getAll", this.todayStr()).then(
+      (rep)=>{
+        try{
+          const o=JSON.parse(rep);
+          this.cache.board=o.board||[]; this.cache.stats=o.stats||null; this.cache.plays=o.plays||null;
+          cb(this.cache.board, true);
+        }catch(e){ cb(this.localBoard(), false); }
+      },
+      ()=>{ cb(this.localBoard(), false); });
   },
   trackVisit(){
-    this.ensureFirebase().then(ok=>{
-      if(!ok) return;
-      try{
-        if(!localStorage.getItem('kids_uid')){ localStorage.setItem('kids_uid','u'+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36)); }
-        const uid=localStorage.getItem('kids_uid');
-        const d=new Date();
-        const day=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-        this.db.ref('stats/visitsTotal').transaction(v=>(v||0)+1);
-        this.db.ref('stats/days/'+day).transaction(v=>(v||0)+1);
-        this.db.ref('stats/unique/'+uid).set({first:Date.now()});
-      }catch(e){}
-    });
+    Net.rpc("visit", this.todayStr()).then(
+      (rep)=>{
+        try{
+          const o=JSON.parse(rep);
+          this.cache.board=o.board||[]; this.cache.stats=o.stats||null; this.cache.plays=o.plays||null;
+        }catch(e){}
+      }, ()=>{});
   },
   countPlay(key){
     try{ save.plays[key]=(save.plays[key]||0)+1; persist(); }catch(e){}
-    this.ensureFirebase().then(ok=>{
-      if(!ok) return;
-      try{ this.db.ref('stats/games/'+key).transaction(v=>(v||0)+1); }catch(e){}
-    });
+    Net.rpc("play", key).then(
+      (rep)=>{ try{ const o=JSON.parse(rep); if(o&&o.plays) this.cache.plays=o.plays; }catch(e){} },
+      ()=>{});
   },
   readPlays(cb){
-    this.ensureFirebase().then(ok=>{
-      if(!ok){ cb(null); return; }
-      try{
-        this.db.ref('stats/games').once('value', s=>cb(s.val()||{}), ()=>cb(null));
-      }catch(e){ cb(null); }
-    });
+    if(this.cache.plays){ cb(this.cache.plays); return; }
+    Net.rpc("getAll", this.todayStr()).then(
+      (rep)=>{ try{ const o=JSON.parse(rep); this.cache.plays=o.plays||{}; cb(this.cache.plays); }catch(e){ cb(null); } },
+      ()=>cb(null));
   },
   sendFeedback(text, cb){
     const clean=String(text||'').trim().slice(0,200);
     if(!clean){ cb(false); return; }
     const name=this.playerName()||'аноним';
-    this.ensureFirebase().then(ok=>{
-      if(!ok){ cb(false); return; }
-      try{
-        this.db.ref('feedback').push(
-          {name:String(name).slice(0,12), text:clean, stars:this.totalStars()||0, ts:Date.now()},
-          err=>cb(!err)
-        );
-      }catch(e){ cb(false); }
-    });
+    Net.rpc("feedback", JSON.stringify({name:String(name).slice(0,12), text:clean, stars:this.totalStars()||0})).then(
+      ()=>cb(true), ()=>cb(false));
   },
   readStats(cb){
-    this.ensureFirebase().then(ok=>{
-      if(!ok){ cb(null); return; }
-      try{
-        this.db.ref('stats').once('value', s=>{
-          const v=s.val()||{};
-          const d=new Date();
-          const day=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-          cb({ total:v.visitsTotal||0, today:(v.days&&v.days[day])||0, unique:v.unique?Object.keys(v.unique).length:0 });
-        }, ()=>cb(null));
-      }catch(e){ cb(null); }
-    });
+    if(this.cache.stats){ cb(this.cache.stats); return; }
+    Net.rpc("getAll", this.todayStr()).then(
+      (rep)=>{ try{ const o=JSON.parse(rep); this.cache.stats=o.stats||null; cb(this.cache.stats); }catch(e){ cb(null); } },
+      ()=>cb(null));
   }
 };
 function showLeaderboard(){
@@ -2530,15 +2711,12 @@ function showLeaderboard(){
     t.innerHTML='<div class="lb-row lb-head"><span>#</span><span>Имя</span><span>⭐</span></div>'+
       rows.map((r,i)=>`<div class="lb-row${i===0?' lb-first':''}"><span>${i+1}</span><span>${esc(r.name)}</span><span>${r.stars}</span></div>`).join('');
     const note=document.getElementById('lbNote');
-    if(!online) note.textContent='Оффлайн-режим: таблица хранится только у тебя. Для общей таблицы на itch.io добавь Firebase-конфиг в LB_CONFIG (инструкция — в комментарии кода).';
   }
-  LB.ensureFirebase().then(()=>{
     LB.top((rows, online)=>renderTable(rows, online));
     LB.readStats(st=>{
       if(st) document.getElementById('lbStats').textContent='🎮 Открытий: '+st.total+' · 📅 Сегодня: '+st.today+' · 👥 Устройств: '+st.unique;
     });
     LB.readPlays(fb=>renderPlays(fb));
-  });
   function renderPlays(fb){
     const local=save.plays||{};
     const rows=[];
@@ -2567,12 +2745,10 @@ function showLeaderboard(){
     const name=(inp.value||'Игрок').trim().slice(0,12)||'Игрок';
     LB.setPlayerName(name);
     document.getElementById('lbMsg').textContent='Отправляю…';
-    LB.ensureFirebase().then(()=>{
       LB.submit(name, myStars, ok=>{
         document.getElementById('lbMsg').textContent= ok? 'Отправлено! 🎉' : 'Нет связи — результат сохранён локально 📁';
         LB.top((rows, online)=>renderTable(rows, online));
       });
-    });
   });
 }
 
@@ -2715,7 +2891,7 @@ const puzzle={
     const size=clamp(Math.min(W-70,H-290),220,560);
     this.boardS=size;
     this.boardX=(W-size)/2;
-    this.boardY=Math.max(105,105+(H-240-size)/2);
+    this.boardY=Math.max(hudGap(8),105+(H-240-size)/2);
   },
   handleClick(px,py){
     if(this.state!=='playing') return;
@@ -2887,7 +3063,7 @@ const coloring={
     // сцена
     const sc=COLOR_SCENES[this.level];
     const scale=clamp(Math.min((W-40)/600,(H-240)/600),0.3,1.4);
-    const offX=(W-600*scale)/2, offY=Math.max(95,(H-200-600*scale)/2);
+    const offX=(W-600*scale)/2, offY=Math.max(hudGap(4),(H-200-600*scale)/2);
     const sx=(px-offX)/scale, sy=(py-offY)/scale;
     if(sx<0||sx>600||sy<0||sy>600) return;
     const pc=this.pickCtx;
@@ -2916,7 +3092,7 @@ const coloring={
     ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
     ambient.update(1/60); ambient.draw(t);
     const scale=clamp(Math.min((W-40)/600,(H-240)/600),0.3,1.4);
-    const offX=(W-600*scale)/2, offY=Math.max(95,(H-200-600*scale)/2);
+    const offX=(W-600*scale)/2, offY=Math.max(hudGap(4),(H-200-600*scale)/2);
     ctx.save();
     ctx.translate(offX,offY); ctx.scale(scale,scale);
     ctx.fillStyle='#fff'; ctx.fillRect(-14,-14,628,628);
@@ -2972,7 +3148,7 @@ const memory={
     const gw=this.cols*this.cardW+(this.cols-1)*12;
     this.startX=(W-gw)/2;
     const gh=4*this.cardH+3*12;
-    this.startY=Math.max(120,(H-gh-70)/2);
+    this.startY=Math.max(hudGap(10),(H-gh-70)/2);
   },
   handleClick(px,py){
     if(this.state!=='playing') return;
@@ -3164,7 +3340,7 @@ const countG={
     this.chars=[];
     let guard=80;
     while(this.chars.length<this.num&&guard-->0){
-      const x=rnd(90,W-90), y=rnd(190,H-270);
+      const x=rnd(90,W-90), y=rnd(Math.max(190,hudGap(40)),H-270);
       if(this.chars.every(p=>Math.hypot(p.x-x,p.y-y)>95))
         this.chars.push({x,y,ch:Math.floor(Math.random()*CHAR_COUNT),ph:rnd(0,TAU)});
     }
@@ -3215,7 +3391,7 @@ const countG={
     ambient.update(1/60); ambient.draw(t);
     ctx.font='900 34px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillStyle='#7a3d1a';
-    ctx.fillText('Сколько героев?',W/2,140);
+    ctx.fillText('Сколько героев?',W/2,Math.max(140,hudGap(30)));
     for(const ch of this.chars){
       const bob=Math.sin(t*2+ch.ph)*4;
       ctx.save(); ctx.translate(ch.x,ch.y+bob);
@@ -3317,7 +3493,7 @@ const shadowG={
     ambient.update(1/60); ambient.draw(t);
     ctx.fillStyle='rgba(255,255,255,.95)';
     ctx.font='900 30px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('Кто эта тень?',W/2,120);
+    ctx.fillText('Кто эта тень?',W/2,Math.max(120,hudGap(30)));
     // герой в «прожекторе»
     const sp=ctx.createRadialGradient(W/2,270,20,W/2,270,150);
     sp.addColorStop(0,'rgba(255,246,200,.35)'); sp.addColorStop(1,'rgba(255,246,200,0)');
@@ -3390,7 +3566,7 @@ const chapaev={
     const bw=clamp(W-56,260,560);
     const bh=clamp(H-235,300,Math.min(bw*1.32,640));
     const bx=(W-bw)/2;
-    const by=Math.max(100,100+(H-190-bh)/2);
+    const by=Math.max(hudGap(6),100+(H-190-bh)/2);
     if(this._pb&&(this._pb.w!==bw||this._pb.h!==bh||this._pb.x!==bx||this._pb.y!==by)){
       const kx=bw/this._pb.w, ky=bh/this._pb.h;
       for(const p of this.pieces){
